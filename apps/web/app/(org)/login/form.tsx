@@ -70,6 +70,22 @@ export function LoginForm() {
 		[next],
 	);
 
+	const publicEnv = usePublicEnv();
+
+	// OpenHost SSO: when the app sits behind a trusted auth proxy that vouches
+	// for the owner, sign them in automatically instead of emailing a code.
+	// Guarded: a failed attempt lands on ?error and falls back to the normal
+	// form, so login can never wedge into a loop.
+	const trustedProxyAttempted = useRef(false);
+	useEffect(() => {
+		if (!publicEnv.trustedProxyAuthAvailable) return;
+		if (trustedProxyAttempted.current) return;
+		if (searchParams?.get("error")) return;
+		trustedProxyAttempted.current = true;
+		const nextPath = getNextPath();
+		signIn("trusted-proxy", nextPath ? { callbackUrl: nextPath } : undefined);
+	}, [publicEnv.trustedProxyAuthAvailable, searchParams, getNextPath]);
+
 	useEffect(() => {
 		loginFormMounted.current = true;
 		return () => {

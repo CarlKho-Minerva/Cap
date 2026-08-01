@@ -28,6 +28,9 @@ export async function AppProviders({ children }: PropsWithChildren) {
 								webUrl: buildEnv.NEXT_PUBLIC_WEB_URL,
 								workosAuthAvailable: !!serverEnv().WORKOS_CLIENT_ID,
 								googleAuthAvailable: !!serverEnv().GOOGLE_CLIENT_ID,
+								trustedProxyAuthAvailable:
+									!!serverEnv().TRUSTED_PROXY_AUTH_HEADER &&
+									!!serverEnv().TRUSTED_PROXY_AUTH_EMAIL,
 							}}
 						>
 							<ReactQueryProvider>
