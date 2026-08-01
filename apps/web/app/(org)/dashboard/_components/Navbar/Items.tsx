@@ -429,10 +429,13 @@ const AdminNavItems = ({ toggleMobileNav }: Props) => {
 						</div>
 					</div>
 					<div className="pt-2 pb-4 w-full shrink-0">
-						<UsageButton
-							toggleMobileNav={() => toggleMobileNav?.()}
-							subscribed={user.isPro}
-						/>
+						{/* Billing/upgrade UI is Cap Cloud only — self-host has no plans. */}
+						{buildEnv.NEXT_PUBLIC_IS_CAP && (
+							<UsageButton
+								toggleMobileNav={() => toggleMobileNav?.()}
+								subscribed={user.isPro}
+							/>
+						)}
 						{buildEnv.NEXT_PUBLIC_IS_CAP && (
 							<div className="flex justify-center items-center mt-2">
 								<Link
