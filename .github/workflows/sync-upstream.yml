@@ -1,0 +1,64 @@
+name: Sync upstream Cap
+
+# Merges upstream CapSoftware/cap into carl/openhost-selfhost and opens a PR to
+# review. Manual (Run workflow) — the openhost-cap "Cap update check" job tells
+# you when there's something upstream worth pulling. Dispatch-only on purpose:
+# GitHub throttles scheduled cron on forks, so the reliable heartbeat lives in
+# openhost-cap (not a fork) and prompts you to run this.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: carl/openhost-selfhost
+          fetch-depth: 0
+
+      - name: Merge upstream, open a PR (or an issue on conflict)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "cap-sync-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git remote add upstream https://github.com/CapSoftware/cap.git
+          git fetch --no-tags upstream main
+          COUNT=$(git rev-list --count carl/openhost-selfhost..upstream/main)
+          if [ "$COUNT" -eq 0 ]; then echo "Already up to date with upstream/main."; exit 0; fi
+
+          git checkout -B auto/upstream-sync
+          if git merge --no-edit upstream/main; then
+            git push -f origin auto/upstream-sync
+            printf '%s\n' \
+              "Automated merge of \`upstream/main\` (CapSoftware/cap) into \`carl/openhost-selfhost\`." \
+              "" \
+              "**$COUNT new upstream commit(s).** Review, then merge. After merging:" \
+              "1. Run **Docker Build Web** (input \`tag\` = \`selfhost\`) to publish a new image." \
+              "2. Merge the digest-bump PR that appears in openhost-cap, then \`oh app reload cap --update\`." \
+              "" \
+              "_automated_" > body.md
+            gh pr view auto/upstream-sync --json number >/dev/null 2>&1 || \
+              gh pr create --base carl/openhost-selfhost --head auto/upstream-sync \
+                --title "Sync upstream Cap ($COUNT new commits)" --body-file body.md
+          else
+            git merge --abort
+            printf '%s\n' \
+              "\`upstream/main\` has $COUNT new commit(s) that conflict with the self-host changes on \`carl/openhost-selfhost\`." \
+              "" \
+              "Resolve locally:" \
+              "\`\`\`" \
+              "git fetch upstream && git checkout carl/openhost-selfhost && git merge upstream/main" \
+              "\`\`\`" \
+              "Conflicts are most likely in the files this fork touches: Items.tsx, login/form.tsx, AppProviders.tsx, public-env.tsx, auth-options.ts, env/server.ts." \
+              "" \
+              "_automated_" > body.md
+            gh issue create --title "Upstream Cap sync needs a manual merge" --body-file body.md
+          fi
