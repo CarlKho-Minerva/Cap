@@ -1475,6 +1475,7 @@ dependencies = [
  "futures",
  "futures-intrusive",
  "global-hotkey",
+ "hound",
  "image 0.25.8",
  "kameo",
  "keyed_priority_queue",
