@@ -2,6 +2,7 @@ import "server-only";
 
 import { serverEnv } from "@cap/env";
 import {
+	Analytics,
 	AwsCredentials,
 	Database,
 	Extensions,
@@ -106,6 +107,7 @@ const WorkflowRpcLive = Layer.unwrapScoped(
 );
 
 export const Dependencies = Layer.mergeAll(
+	Analytics.Default,
 	S3Buckets.Default,
 	Storage.Default,
 	Videos.Default,

@@ -1,6 +1,6 @@
 import { db } from "@cap/database";
 import { videos, videoUploads } from "@cap/database/schema";
-import { provideOptionalAuth, Tinybird } from "@cap/web-backend";
+import { Analytics, provideOptionalAuth } from "@cap/web-backend";
 import { CurrentUser, Video } from "@cap/web-domain";
 import { eq } from "drizzle-orm";
 import { Effect, Option } from "effect";
@@ -150,25 +150,32 @@ export async function POST(request: NextRequest) {
 				body.ownerId ||
 				(hostname ? `domain:${hostname}` : "public");
 
-			const tinybird = yield* Tinybird;
-			yield* tinybird.appendEvents([
-				{
-					timestamp: timestamp.toISOString(),
-					session_id: sessionId ?? "anon",
-					action: "page_hit",
-					version: "1.0",
-					tenant_id: tenantId,
-					video_id: body.videoId,
-					pathname,
-					country,
-					region,
-					city,
-					browser: browserName,
-					device: deviceType,
-					os: osName,
-					user_id: userId,
-				},
-			]);
+			const analytics = yield* Analytics;
+			yield* analytics
+				.appendEvents([
+					{
+						timestamp: timestamp.toISOString(),
+						session_id: sessionId ?? "anon",
+						action: "page_hit",
+						version: "1.0",
+						tenant_id: tenantId,
+						video_id: body.videoId,
+						pathname,
+						country,
+						region,
+						city,
+						browser: browserName,
+						device: deviceType,
+						os: osName,
+						user_id: userId,
+					},
+				])
+				.pipe(
+					Effect.catchAll((error) => {
+						console.error("Failed to record analytics event:", error);
+						return Effect.void;
+					}),
+				);
 
 			const isNewVideo =
 				videoRecord && videoRecord.createdAt >= ANON_NOTIF_CUTOFF;

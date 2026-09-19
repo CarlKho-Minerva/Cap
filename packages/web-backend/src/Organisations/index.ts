@@ -2,6 +2,7 @@ import * as Db from "@cap/database/schema";
 import { CurrentUser, Organisation, Policy } from "@cap/web-domain";
 import * as Dz from "drizzle-orm";
 import { Effect, Array as EffectArray, Option } from "effect";
+import { Analytics } from "../Analytics/index.ts";
 import { Database } from "../Database";
 import { ImageUploads } from "../ImageUploads";
 import { S3Buckets } from "../S3Buckets";
@@ -34,6 +35,7 @@ export class Organisations extends Effect.Service<Organisations>()(
 			const imageUploads = yield* ImageUploads;
 			const s3Buckets = yield* S3Buckets;
 			const tinybird = yield* Tinybird;
+			const analytics = yield* Analytics;
 
 			const update = Effect.fn("Organisations.update")(function* (
 				payload: Organisation.OrganisationUpdate,
@@ -153,6 +155,7 @@ export class Organisations extends Effect.Service<Organisations>()(
 					(datasource) => tinybird.deleteData(datasource, deleteCondition),
 					{ concurrency: 1 },
 				);
+				yield* analytics.deleteForTenants([id, organisation.ownerId]);
 
 				yield* db.use((db) =>
 					db.transaction(async (tx) => {
@@ -325,6 +328,7 @@ export class Organisations extends Effect.Service<Organisations>()(
 			ImageUploads.Default,
 			S3Buckets.Default,
 			Tinybird.Default,
+			Analytics.Default,
 			Database.Default,
 			OrganisationsPolicy.Default,
 		],
