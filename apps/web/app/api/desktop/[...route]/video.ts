@@ -387,6 +387,69 @@ app.delete(
 );
 
 app.post(
+	"/transcript",
+	zValidator(
+		"json",
+		z.object({
+			videoId: z.string(),
+			status: z.union([z.literal("COMPLETE"), z.literal("NO_AUDIO")]).optional(),
+		}),
+	),
+	async (c) => {
+		const { videoId: videoIdRaw, status } = c.req.valid("json");
+		const user = c.get("user");
+		const videoId = Video.VideoId.make(videoIdRaw);
+
+		try {
+			const [video] = await db()
+				.select()
+				.from(videos)
+				.where(eq(videos.id, videoId))
+				.limit(1);
+
+			if (!video)
+				return c.json(
+					{ error: true, message: "Video not found" },
+					{ status: 404 },
+				);
+
+			if (video.ownerId !== user.id)
+				return c.json({ error: true, message: "Forbidden" }, { status: 403 });
+
+			const nextStatus = status ?? "COMPLETE";
+
+			if (nextStatus === "COMPLETE") {
+				const key = `${video.ownerId}/${videoId}/transcription.vtt`;
+				const exists = await Effect.gen(function* () {
+					const [bucket] = yield* Storage.getAccessForVideo(
+						decodeStorageVideo(video),
+					);
+					return yield* bucket
+						.headObject(key)
+						.pipe(Effect.as(true), Effect.orElseSucceed(() => false));
+				}).pipe(runPromise);
+
+				if (!exists)
+					return c.json(
+						{ error: true, message: "Transcript not found in bucket" },
+						{ status: 404 },
+					);
+			}
+
+			await db()
+				.update(videos)
+				.set({ transcriptionStatus: nextStatus })
+				.where(eq(videos.id, videoId));
+
+			return c.json({ success: true });
+		} catch (error) {
+			console.error("Error in video transcript endpoint:", error);
+			return c.json({ error: "Internal server error" }, { status: 500 });
+		}
+	},
+);
+
+app.post(
 	"/progress",
 	zValidator(
 		"json",
