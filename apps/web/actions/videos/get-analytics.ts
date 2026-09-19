@@ -2,7 +2,7 @@
 
 import { db } from "@cap/database";
 import { videos } from "@cap/database/schema";
-import { Tinybird } from "@cap/web-backend";
+import { Analytics, Tinybird } from "@cap/web-backend";
 import { Video } from "@cap/web-domain";
 import { eq } from "drizzle-orm";
 import { Effect } from "effect";
@@ -50,11 +50,30 @@ export async function getVideoAnalytics(
 	return runPromise(
 		Effect.gen(function* () {
 			const tinybird = yield* Tinybird;
+			const analytics = yield* Analytics;
 
 			const rangeDays = normalizeRangeDays(options?.rangeDays);
 			const now = new Date();
 			const from = new Date(now.getTime() - rangeDays * DAY_IN_MS);
 			const pathname = `/s/${videoId}`;
+
+			if (analytics.usesDatabase) {
+				const counts = yield* analytics
+					.viewCountsByPathname({
+						tenantId: orgId ?? "",
+						pathnames: [pathname],
+						from,
+						to: now,
+					})
+					.pipe(
+						Effect.catchAll((error) => {
+							console.error("analytics fallback query failed", error);
+							return Effect.succeed(new Map<string, number>());
+						}),
+					);
+				return { count: counts.get(pathname) ?? 0 };
+			}
+
 			const aggregateConditions = [
 				orgId ? `tenant_id = '${escapeLiteral(orgId)}'` : undefined,
 				`pathname = '${escapeLiteral(pathname)}'`,
