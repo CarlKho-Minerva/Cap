@@ -170,6 +170,7 @@ interface ShareProps {
 	} | null;
 	aiGenerationAvailable: boolean;
 	transcriptionGenerationAvailable: boolean;
+	allowGuestComments?: boolean;
 }
 
 const useVideoStatus = (
@@ -287,6 +288,7 @@ export const Share = ({
 	defaultPlaybackSpeed,
 	aiGenerationAvailable,
 	transcriptionGenerationAvailable,
+	allowGuestComments = false,
 }: ShareProps) => {
 	const isScreenshot = data.isScreenshot === true;
 	const effectiveDate: Date = data.metadata?.customCreatedAt
@@ -561,6 +563,7 @@ export const Share = ({
 								onCommentSuccess={handleCommentSuccess}
 								disableComments={areCommentStampsDisabled}
 								disableReactions={areReactionStampsDisabled}
+								allowGuestComments={allowGuestComments}
 								data={data}
 							/>
 						</div>
@@ -599,6 +602,7 @@ export const Share = ({
 							onCommentSuccess={handleCommentSuccess}
 							disableComments={areCommentStampsDisabled}
 							disableReactions={areReactionStampsDisabled}
+							allowGuestComments={allowGuestComments}
 							data={data}
 						/>
 					</div>

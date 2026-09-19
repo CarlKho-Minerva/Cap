@@ -101,6 +101,7 @@ interface Props {
 		type: "text" | "emoji";
 		content: string;
 		authorName?: string | null;
+		guestName?: string | null;
 	}>;
 	onSeek?: (time: number) => void;
 	enhancedAudioUrl?: string | null;
