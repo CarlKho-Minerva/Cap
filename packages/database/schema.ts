@@ -483,7 +483,8 @@ export const comments = mysqlTable(
 		type: varchar("type", { length: 6, enum: ["emoji", "text"] }).notNull(),
 		content: text("content").notNull(),
 		timestamp: float("timestamp"),
-		authorId: nanoId("authorId").notNull().$type<User.UserId>(),
+		authorId: nanoIdNullable("authorId").$type<User.UserId>(),
+		guestName: varchar("guestName", { length: 40 }),
 		videoId: nanoId("videoId").notNull().$type<Video.VideoId>(),
 		createdAt: timestamp("createdAt").notNull().defaultNow(),
 		updatedAt: timestamp("updatedAt").notNull().defaultNow().onUpdateNow(),
@@ -500,6 +501,36 @@ export const comments = mysqlTable(
 		authorIdIndex: index("author_id_idx").on(table.authorId),
 		parentCommentIdIndex: index("parent_comment_id_idx").on(
 			table.parentCommentId,
+		),
+	}),
+);
+
+export const analyticsEvents = mysqlTable(
+	"analytics_events",
+	{
+		id: nanoId("id").notNull().primaryKey(),
+		timestamp: timestamp("timestamp").notNull().defaultNow(),
+		sessionId: varchar("sessionId", { length: 128 }),
+		userId: nanoIdNullable("userId").$type<User.UserId>(),
+		tenantId: varchar("tenantId", { length: 255 }),
+		action: varchar("action", { length: 64 }).notNull(),
+		pathname: varchar("pathname", { length: 512 }),
+		videoId: nanoIdNullable("videoId").$type<Video.VideoId>(),
+		country: varchar("country", { length: 64 }),
+		region: varchar("region", { length: 64 }),
+		city: varchar("city", { length: 128 }),
+		browser: varchar("browser", { length: 64 }),
+		device: varchar("device", { length: 64 }),
+		os: varchar("os", { length: 64 }),
+	},
+	(table) => ({
+		videoTimestampIndex: index("analytics_events_video_timestamp_idx").on(
+			table.videoId,
+			table.timestamp,
+		),
+		tenantTimestampIndex: index("analytics_events_tenant_timestamp_idx").on(
+			table.tenantId,
+			table.timestamp,
 		),
 	}),
 );
