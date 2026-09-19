@@ -308,7 +308,7 @@ export const AgentComment = Schema.Struct({
 	createdAt: Schema.String,
 	updatedAt: Schema.String,
 	author: Schema.Struct({
-		id: UserId,
+		id: Schema.NullOr(UserId),
 		name: Schema.NullOr(Schema.String),
 	}),
 });
@@ -320,7 +320,7 @@ export const AgentReaction = Schema.Struct({
 	timestampMs: Schema.NullOr(Schema.Number),
 	createdAt: Schema.String,
 	author: Schema.Struct({
-		id: UserId,
+		id: Schema.NullOr(UserId),
 		name: Schema.NullOr(Schema.String),
 	}),
 });
@@ -460,7 +460,7 @@ export const AgentFeedbackResponse = Schema.Struct({
 	createdAt: Schema.String,
 	updatedAt: Schema.String,
 	author: Schema.Struct({
-		id: UserId,
+		id: Schema.NullOr(UserId),
 		name: Schema.NullOr(Schema.String),
 	}),
 	requestId: Schema.String,

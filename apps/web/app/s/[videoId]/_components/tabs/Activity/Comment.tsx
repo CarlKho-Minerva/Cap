@@ -41,7 +41,10 @@ const CommentComponent: React.FC<{
 }) => {
 	const user = useCurrentUser();
 	const isReplying = replyingToId === comment.id;
-	const isOwnComment = user?.id === comment.authorId;
+	const isOwnComment =
+		comment.authorId !== null && user?.id === comment.authorId;
+	const displayName = comment.authorName || comment.guestName || "Anonymous";
+	const isGuestComment = !comment.authorId && Boolean(comment.guestName);
 	const commentParams = useSearchParams().get("comment");
 	const replyParams = useSearchParams().get("reply");
 	const nestedReplies =
@@ -75,10 +78,10 @@ const CommentComponent: React.FC<{
 			)}
 		>
 			<div className="flex items-start space-x-2.5">
-				{comment.authorName && (
+				{displayName && (
 					<SignedImageUrl
 						image={comment.authorImage}
-						name={comment.authorName}
+						name={displayName}
 						className="size-6"
 						letterClass="text-sm"
 					/>
@@ -103,8 +106,13 @@ const CommentComponent: React.FC<{
 					className={"flex-1 p-3 rounded-xl border border-gray-3 bg-gray-2"}
 				>
 					<div className="flex gap-3 justify-between items-center">
-						<p className="text-sm font-medium truncate text-gray-12">
-							{comment.authorName || "Anonymous"}
+						<p className="flex gap-1.5 items-center text-sm font-medium truncate text-gray-12">
+							{displayName}
+							{isGuestComment && (
+								<span className="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-gray-3 text-gray-10">
+									guest
+								</span>
+							)}
 						</p>
 						<div className="flex gap-2 items-center text-nowrap min-w-fit">
 							<Tooltip content={formatTimestamp(commentDate)}>
