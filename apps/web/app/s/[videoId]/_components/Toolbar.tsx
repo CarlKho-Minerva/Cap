@@ -8,6 +8,11 @@ import dynamic from "next/dynamic";
 import { startTransition, useEffect, useState } from "react";
 import { newComment } from "@/actions/videos/new-comment";
 import { useCurrentUser } from "@/app/Layout/AuthContext";
+import {
+	GUEST_NAME_MAX_LENGTH,
+	GUEST_NAME_STORAGE_KEY,
+	sanitizeGuestText,
+} from "@/lib/guest-comments";
 import type { CommentType } from "../Share";
 import type { VideoData } from "../types";
 import { AuthOverlay } from "./AuthOverlayLazy";
@@ -31,7 +36,12 @@ interface ToolbarProps {
 	disableReactions?: boolean;
 	/** Owner is on Pro and the viewer is signed in; uploads re-check server-side. */
 	canRecordMedia?: boolean;
+	allowGuestComments?: boolean;
 }
+
+type PendingGuestAction =
+	| { kind: "emoji"; emoji: string }
+	| { kind: "comment" };
 
 interface EmojiButtonProps {
 	label: string;
@@ -61,17 +71,69 @@ export const Toolbar = ({
 	disableComments,
 	disableReactions,
 	canRecordMedia = false,
+	allowGuestComments = false,
 }: ToolbarProps) => {
 	const user = useCurrentUser();
 	const [commentBoxOpen, setCommentBoxOpen] = useState(false);
 	const [comment, setComment] = useState("");
 	const [showAuthOverlay, setShowAuthOverlay] = useState(false);
+	const [guestName, setGuestName] = useState<string | null>(null);
+	const [guestNameDraft, setGuestNameDraft] = useState("");
+	const [pendingGuestAction, setPendingGuestAction] =
+		useState<PendingGuestAction | null>(null);
 	const [recordIntent, setRecordIntent] = useState<{
 		kind: RecordIntentKind;
 		t: number;
 	} | null>(null);
 	const canComment = !disableComments;
 	const canReact = !disableReactions;
+	const isGuest = !user && allowGuestComments;
+
+	useEffect(() => {
+		if (user) return;
+		const stored = sanitizeGuestText(
+			window.localStorage.getItem(GUEST_NAME_STORAGE_KEY),
+			GUEST_NAME_MAX_LENGTH,
+		);
+		if (stored) setGuestName(stored);
+	}, [user]);
+
+	const identity = user
+		? {
+				authorId: user.id,
+				authorName: user.name,
+				authorImage: user.imageUrl,
+				guestName: null,
+			}
+		: {
+				authorId: null,
+				authorName: guestName,
+				authorImage: null,
+				guestName,
+			};
+
+	const requireIdentity = (action: PendingGuestAction) => {
+		if (user) return true;
+		if (!isGuest) {
+			setShowAuthOverlay(true);
+			return false;
+		}
+		if (guestName) return true;
+		setPendingGuestAction(action);
+		return false;
+	};
+
+	const saveGuestName = () => {
+		const name = sanitizeGuestText(guestNameDraft, GUEST_NAME_MAX_LENGTH);
+		if (!name) return;
+		window.localStorage.setItem(GUEST_NAME_STORAGE_KEY, name);
+		setGuestName(name);
+		setGuestNameDraft("");
+		const pending = pendingGuestAction;
+		setPendingGuestAction(null);
+		if (pending?.kind === "emoji") void submitEmoji(pending.emoji, name);
+		else if (pending?.kind === "comment") setCommentBoxOpen(true);
+	};
 
 	const startRecording = (kind: RecordIntentKind) => {
 		// Anchor to the playhead like a text comment, pause, and fold the box
@@ -84,17 +146,18 @@ export const Toolbar = ({
 		setRecordIntent({ kind, t });
 	};
 
-	const handleEmojiClick = async (emoji: string) => {
-		if (!canReact || !user) return;
+	const submitEmoji = async (emoji: string, guestNameOverride?: string) => {
+		const guest = user ? null : (guestNameOverride ?? guestName);
 		const videoElement = document.querySelector("video") as HTMLVideoElement;
 		const currentTime = data.isScreenshot
 			? null
 			: videoElement?.currentTime || 0;
 		const optimisticComment: CommentType = {
 			id: `temp-${Date.now()}` as Comment.CommentId,
-			authorId: user.id,
-			authorName: user.name,
-			authorImage: user.imageUrl,
+			authorId: identity.authorId,
+			guestName: guest,
+			authorName: user ? user.name : guest,
+			authorImage: identity.authorImage,
 			content: emoji,
 			createdAt: new Date(),
 			videoId: data.id,
@@ -114,10 +177,11 @@ export const Toolbar = ({
 			const newCommentData = await newComment({
 				content: emoji,
 				videoId: data.id,
-				authorImage: user.imageUrl,
+				authorImage: identity.authorImage,
 				parentCommentId: "" as Comment.CommentId,
 				type: "emoji",
 				timestamp: currentTime,
+				guestName: guest,
 			});
 			startTransition(() => {
 				onCommentSuccess?.(newCommentData);
@@ -130,19 +194,25 @@ export const Toolbar = ({
 		}
 	};
 
+	const handleEmojiClick = async (emoji: string) => {
+		if (!canReact) return;
+		if (!requireIdentity({ kind: "emoji", emoji })) return;
+		await submitEmoji(emoji);
+	};
+
 	const handleCommentSubmit = async () => {
-		if (!canComment || comment.length === 0 || !user) {
-			return;
-		}
+		if (!canComment || comment.length === 0) return;
+		if (!user && !(isGuest && guestName)) return;
 		const videoElement = document.querySelector("video") as HTMLVideoElement;
 		const currentTime = data.isScreenshot
 			? null
 			: videoElement?.currentTime || 0;
 		const optimisticComment: CommentType = {
 			id: `temp-${Date.now()}` as Comment.CommentId,
-			authorId: user.id,
-			authorName: user.name,
-			authorImage: user.imageUrl,
+			authorId: identity.authorId,
+			guestName: identity.guestName,
+			authorName: identity.authorName,
+			authorImage: identity.authorImage,
 			content: comment,
 			createdAt: new Date(),
 			videoId: data.id,
@@ -162,10 +232,11 @@ export const Toolbar = ({
 			const newCommentData = await newComment({
 				content: comment,
 				videoId: data.id,
-				authorImage: user.imageUrl,
+				authorImage: identity.authorImage,
 				parentCommentId: "" as Comment.CommentId,
 				type: "text",
 				timestamp: currentTime,
+				guestName: identity.guestName,
 			});
 			startTransition(() => {
 				onCommentSuccess?.(newCommentData);
@@ -196,8 +267,14 @@ export const Toolbar = ({
 			) {
 				e.preventDefault();
 				if (!user) {
-					setShowAuthOverlay(true);
-					return;
+					if (!isGuest) {
+						setShowAuthOverlay(true);
+						return;
+					}
+					if (!guestName) {
+						setPendingGuestAction({ kind: "comment" });
+						return;
+					}
 				}
 				const videoElement = document.querySelector(
 					"video",
@@ -213,14 +290,11 @@ export const Toolbar = ({
 		return () => {
 			window.removeEventListener("keydown", handleKeyPress);
 		};
-	}, [canComment, commentBoxOpen, user]);
+	}, [canComment, commentBoxOpen, user, isGuest, guestName]);
 
 	const handleCommentClick = () => {
 		if (!canComment) return;
-		if (!user) {
-			setShowAuthOverlay(true);
-			return;
-		}
+		if (!requireIdentity({ kind: "comment" })) return;
 		const videoElement = document.querySelector("video") as HTMLVideoElement;
 		if (videoElement) {
 			videoElement.pause();
@@ -239,7 +313,61 @@ export const Toolbar = ({
 				className="flex overflow-hidden p-2 mx-auto max-w-full bg-white rounded-full border border-gray-5 md:max-w-fit"
 			>
 				<AnimatePresence initial={false} mode="popLayout">
-					{commentBoxOpen && canComment ? (
+					{pendingGuestAction ? (
+						<motion.div
+							layout
+							key="guest-name-box"
+							initial={{ scale: 0.9 }}
+							animate={{ scale: 1 }}
+							className="flex justify-between items-center w-full"
+						>
+							<motion.input
+								layout
+								autoFocus
+								type="text"
+								value={guestNameDraft}
+								onChange={(e) => setGuestNameDraft(e.target.value)}
+								placeholder="Your name"
+								className="flex-grow px-3 h-full outline-none"
+								maxLength={GUEST_NAME_MAX_LENGTH}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") {
+										e.preventDefault();
+										saveGuestName();
+									}
+									if (e.key === "Escape") {
+										setPendingGuestAction(null);
+										setGuestNameDraft("");
+									}
+								}}
+							/>
+							<motion.div
+								layout="position"
+								className="flex items-center space-x-2"
+							>
+								<MotionButton
+									disabled={guestNameDraft.trim().length === 0}
+									variant="primary"
+									size="sm"
+									layout="position"
+									onClick={saveGuestName}
+								>
+									Continue
+								</MotionButton>
+								<MotionButton
+									variant="gray"
+									size="sm"
+									layout="position"
+									onClick={() => {
+										setPendingGuestAction(null);
+										setGuestNameDraft("");
+									}}
+								>
+									Cancel
+								</MotionButton>
+							</motion.div>
+						</motion.div>
+					) : commentBoxOpen && canComment ? (
 						<motion.div
 							layout
 							key="comment-box"

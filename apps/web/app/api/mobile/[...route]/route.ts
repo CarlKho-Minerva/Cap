@@ -2001,7 +2001,7 @@ const getComments = Effect.fn("Mobile.getComments")(function* (
 	);
 	const visibleRows = rows.filter(
 		(row) =>
-			!blockedUserIds.includes(row.authorId) &&
+			(row.authorId === null || !blockedUserIds.includes(row.authorId)) &&
 			!getBlockedUserIds(row.authorPreferences).includes(user.id),
 	);
 

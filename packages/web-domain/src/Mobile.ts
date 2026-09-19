@@ -250,7 +250,7 @@ export const MobileComment = Schema.Struct({
 	createdAt: Schema.String,
 	updatedAt: Schema.String,
 	author: Schema.Struct({
-		id: UserId,
+		id: Schema.NullOr(UserId),
 		name: Schema.NullOr(Schema.String),
 		imageUrl: Schema.NullOr(Schema.String),
 	}),

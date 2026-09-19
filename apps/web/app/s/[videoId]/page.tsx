@@ -47,6 +47,7 @@ import {
 } from "@/app/(org)/dashboard/dashboard-data";
 import { isAiConfigured } from "@/lib/ai/provider";
 import { completeDesktopSegmentsManifestAndQueue } from "@/lib/desktop-segments-recovery";
+import { guestCommentsEnabled } from "@/lib/guest-comments";
 import { createNotification } from "@/lib/Notification";
 import {
 	canManageOrganizationSettings,
@@ -695,6 +696,7 @@ async function AuthorizedContent({
 						mediaKey: comments.mediaKey,
 						mediaDuration: comments.mediaDuration,
 						mediaMeta: comments.mediaMeta,
+						guestName: comments.guestName,
 						authorName: users.name,
 						authorImage: users.image,
 					})
@@ -995,6 +997,9 @@ async function AuthorizedContent({
 				initialAiData={initialAiData}
 				aiGenerationAvailable={aiGenerationEnabled && aiProviderAvailable}
 				transcriptionGenerationAvailable={transcriptionGenerationAvailable}
+				allowGuestComments={guestCommentsEnabled(
+					serverEnv().CAP_ALLOW_GUEST_COMMENTS,
+				)}
 			/>
 		</div>
 	);
