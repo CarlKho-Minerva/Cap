@@ -14,7 +14,7 @@ import {
 import * as Dz from "drizzle-orm";
 import { Effect, Exit, Option } from "effect";
 import type { Schema } from "effect/Schema";
-
+import { Analytics } from "../Analytics/index.ts";
 import { Database } from "../Database.ts";
 import { Storage as StorageService } from "../Storage/index.ts";
 import {
@@ -131,6 +131,7 @@ export class Videos extends Effect.Service<Videos>()("Videos", {
 		const policy = yield* VideosPolicy;
 		const storage = yield* StorageService;
 		const tinybird = yield* Tinybird;
+		const analytics = yield* Analytics;
 
 		const getByIdForViewing = (id: Video.VideoId) =>
 			policy.getViewableById(id).pipe(Effect.withSpan("Videos.getById"));
@@ -181,6 +182,38 @@ export class Videos extends Effect.Service<Videos>()("Videos", {
 						}),
 						Effect.map((response) => response.data ?? []),
 					);
+
+				if (analytics.usesDatabase) {
+					for (const [orgKey, entries] of videosByOrg) {
+						const pathnames = entries.map((entry) => entry.pathname);
+						if (pathnames.length === 0) continue;
+
+						const counts = yield* analytics
+							.viewCountsByPathname({
+								tenantId: orgKey,
+								pathnames,
+								from,
+								to: now,
+							})
+							.pipe(
+								Effect.catchAll((error) => {
+									console.error("analytics fallback query failed", error);
+									return Effect.succeed(new Map<string, number>());
+								}),
+							);
+
+						for (const [pathname, views] of counts)
+							countsByPathname.set(pathname, views);
+					}
+
+					for (const video of analyticsVideos) {
+						const pathname = buildPathname(video.id);
+						if (!countsByPathname.has(pathname))
+							countsByPathname.set(pathname, 0);
+					}
+
+					return countsByPathname;
+				}
 
 				for (const [orgKey, entries] of videosByOrg) {
 					const pathnames = entries.map((entry) => entry.pathname);
@@ -830,5 +863,6 @@ export class Videos extends Effect.Service<Videos>()("Videos", {
 		Database.Default,
 		StorageService.Default,
 		Tinybird.Default,
+		Analytics.Default,
 	],
 }) {}

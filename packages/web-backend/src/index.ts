@@ -1,5 +1,10 @@
 export * from "./AgentAuth.ts";
 export * from "./AgentManagement.ts";
+export {
+	Analytics,
+	type AnalyticsBreakdownField,
+	type AnalyticsBucket,
+} from "./Analytics/index.ts";
 export * from "./Auth.ts";
 export * from "./Aws.ts";
 export * from "./Comments/CommentMediaToken.ts";
