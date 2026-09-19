@@ -91,6 +91,7 @@ export const Comments = Object.assign(
 			const optimisticComment: CommentType = {
 				id: `temp-${Date.now()}` as Comment.CommentId,
 				authorId: user.id as User.UserId,
+				guestName: null,
 				authorName: user?.name,
 				authorImage: user.imageUrl,
 				content,
@@ -139,6 +140,7 @@ export const Comments = Object.assign(
 			const optimisticReply: CommentType = {
 				id: `temp-reply-${Date.now()}` as Comment.CommentId,
 				authorId: user.id,
+				guestName: null,
 				authorName: user.name,
 				authorImage: user.imageUrl,
 				content,

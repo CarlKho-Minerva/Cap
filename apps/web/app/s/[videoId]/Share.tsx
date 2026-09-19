@@ -217,6 +217,7 @@ interface ShareProps {
 	 */
 	header?: React.ReactNode;
 	dashboardDestination?: ShareDashboardDestination | null;
+	allowGuestComments?: boolean;
 }
 
 const useVideoStatus = (
@@ -341,6 +342,7 @@ export const Share = ({
 	viewerSignedIn = false,
 	header,
 	dashboardDestination = null,
+	allowGuestComments = false,
 }: ShareProps) => {
 	const isScreenshot = data.isScreenshot === true;
 	// Memoized: a fresh Date each render would defeat the memoized `data`
@@ -1035,6 +1037,7 @@ export const Share = ({
 														disableComments={areCommentStampsDisabled}
 														disableReactions={areReactionStampsDisabled}
 														canRecordMedia={canRecordMedia && !isScreenshot}
+														allowGuestComments={allowGuestComments}
 														data={data}
 													/>
 													{showRail && railCollapsed && (

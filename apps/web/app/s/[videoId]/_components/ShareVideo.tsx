@@ -38,6 +38,7 @@ import { formatChaptersAsVTT } from "./utils/transcript-utils";
 
 type CommentWithAuthor = typeof commentsSchema.$inferSelect & {
 	authorName: string | null;
+	guestName?: string | null;
 	authorImage: ImageUpload.ImageUrl | null;
 };
 
@@ -225,6 +226,7 @@ export const ShareVideo = forwardRef<
 									timestamp: comment.timestamp,
 									content: comment.content,
 									authorName: comment.authorName,
+									guestName: comment.guestName,
 									authorImage: comment.authorImage ?? undefined,
 								},
 							]

@@ -10,6 +10,7 @@ interface CommentStampsProps {
 		type: "text" | "emoji";
 		content: string;
 		authorName?: string | null;
+		guestName?: string | null;
 		authorImage?: ImageUpload.ImageUrl | null;
 	};
 	adjustedPosition: string;
@@ -64,10 +65,10 @@ const CommentStamp: React.FC<CommentStampsProps> = ({
 
 					<div className="flex gap-2 items-center">
 						{/* User avatar/initial */}
-						{comment.authorName && (
+						{(comment.authorName || comment.guestName) && (
 							<SignedImageUrl
 								image={comment.authorImage}
-								name={comment.authorName}
+								name={comment.authorName || comment.guestName || ""}
 								className="size-6"
 								letterClass="text-sm"
 							/>
@@ -75,7 +76,7 @@ const CommentStamp: React.FC<CommentStampsProps> = ({
 						{/* Comment content */}
 						<div className="flex-1 min-w-0">
 							<div className="text-sm font-medium text-white truncate">
-								{comment.authorName || "Anonymous"}
+								{comment.authorName || comment.guestName || "Anonymous"}
 							</div>
 							<div className="text-xs truncate text-gray-11">
 								{comment.content}

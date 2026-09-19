@@ -336,6 +336,7 @@ async function EmbedContent({
 			timestamp: comments.timestamp,
 			type: comments.type,
 			authorId: comments.authorId,
+			guestName: comments.guestName,
 			videoId: comments.videoId,
 			createdAt: comments.createdAt,
 			updatedAt: comments.updatedAt,
