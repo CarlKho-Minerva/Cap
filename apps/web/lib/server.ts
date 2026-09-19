@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+	Analytics,
 	AwsCredentials,
 	Database,
 	Extensions,
@@ -41,6 +42,7 @@ const CookiePasswordAttachmentLive = Layer.effect(
 );
 
 export const Dependencies = Layer.mergeAll(
+	Analytics.Default,
 	S3Buckets.Default,
 	Storage.Default,
 	Videos.Default,

@@ -1,6 +1,6 @@
 import { db } from "@cap/database";
 import { comments, spaceVideos, videos } from "@cap/database/schema";
-import { Tinybird } from "@cap/web-backend";
+import { Analytics, Tinybird } from "@cap/web-backend";
 import { and, between, eq, inArray } from "drizzle-orm";
 import { sql } from "drizzle-orm/sql";
 import { Effect } from "effect";
@@ -235,6 +235,18 @@ export const getOrgAnalyticsData = async (
 	const tinybirdData = await runPromise(
 		Effect.gen(function* () {
 			const tinybird = yield* Tinybird;
+			const analytics = yield* Analytics;
+
+			if (analytics.usesDatabase)
+				return yield* queryDatabaseAnalytics(
+					analytics,
+					typedOrgId,
+					from,
+					to,
+					bucket,
+					videoIds,
+					Boolean(capId),
+				);
 
 			const viewSeries = yield* queryViewSeries(
 				tinybird,
@@ -601,6 +613,70 @@ const queryCommentsSeries = async (
 };
 
 type TinybirdService = Effect.Effect.Success<typeof Tinybird>;
+type AnalyticsService = Effect.Effect.Success<typeof Analytics>;
+
+const buildPathnames = (videoIds?: VideoId[]) =>
+	videoIds && videoIds.length > 0
+		? videoIds.map((id) => `/s/${id}`)
+		: undefined;
+
+const queryDatabaseAnalytics = (
+	analytics: AnalyticsService,
+	orgId: OrgId,
+	from: Date,
+	to: Date,
+	bucket: "hour" | "day",
+	videoIds: VideoId[] | undefined,
+	isSingleCap: boolean,
+): Effect.Effect<TinybirdAnalyticsData, never, never> => {
+	const query = {
+		tenantId: orgId,
+		from,
+		to,
+		pathnames: buildPathnames(videoIds),
+	};
+
+	const tolerate = <A>(effect: Effect.Effect<A, unknown, never>, fallback: A) =>
+		effect.pipe(
+			Effect.catchAll((error) => {
+				console.error("analytics fallback query failed", error);
+				return Effect.succeed(fallback);
+			}),
+		);
+
+	return Effect.all(
+		{
+			viewSeries: tolerate(
+				analytics.viewSeries({ ...query, bucket }),
+				[] as ViewSeriesRow[],
+			),
+			countries: tolerate(
+				analytics.breakdown({ ...query, field: "country" }),
+				[] as BreakdownSourceRow[],
+			),
+			cities: tolerate(
+				analytics.breakdown({ ...query, field: "city" }),
+				[] as BreakdownSourceRow[],
+			),
+			browsers: tolerate(
+				analytics.breakdown({ ...query, field: "browser" }),
+				[] as BreakdownSourceRow[],
+			),
+			devices: tolerate(
+				analytics.breakdown({ ...query, field: "device" }),
+				[] as BreakdownSourceRow[],
+			),
+			operatingSystems: tolerate(
+				analytics.breakdown({ ...query, field: "os" }),
+				[] as BreakdownSourceRow[],
+			),
+			topCapsRaw: isSingleCap
+				? Effect.succeed([] as TopCapRow[])
+				: tolerate(analytics.topCaps(query), [] as TopCapRow[]),
+		},
+		{ concurrency: "unbounded" },
+	);
+};
 
 const queryViewSeries = (
 	tinybird: TinybirdService,
