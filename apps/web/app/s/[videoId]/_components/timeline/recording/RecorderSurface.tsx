@@ -107,6 +107,7 @@ export default function RecorderSurface({
 			const optimistic: CommentType = {
 				id: tempId,
 				authorId: user.id,
+				guestName: null,
 				authorName: user.name,
 				authorImage: user.imageUrl,
 				content: "",

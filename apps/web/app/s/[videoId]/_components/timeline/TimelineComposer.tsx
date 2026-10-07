@@ -95,6 +95,7 @@ export function TimelineComposer({
 		const optimistic: CommentType = {
 			id: Comment.CommentId.make(`temp-${Date.now()}`),
 			authorId: user.id,
+			guestName: null,
 			authorName: user.name,
 			authorImage: user.imageUrl,
 			content,

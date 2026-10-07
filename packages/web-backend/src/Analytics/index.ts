@@ -1,5 +1,5 @@
-import * as Db from "@cap/database/schema";
 import { nanoId } from "@cap/database/helpers";
+import * as Db from "@cap/database/schema";
 import * as Dz from "drizzle-orm";
 import { Effect } from "effect";
 
@@ -158,9 +158,7 @@ export class Analytics extends Effect.Service<Analytics>()("Analytics", {
 				database
 					.select({
 						name: column,
-						country: Dz.sql<
-							string | null
-						>`MIN(${Db.analyticsEvents.country})`,
+						country: Dz.sql<string | null>`MIN(${Db.analyticsEvents.country})`,
 						views: uniqueSessions,
 					})
 					.from(Db.analyticsEvents)
