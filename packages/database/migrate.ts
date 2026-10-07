@@ -4,6 +4,10 @@ import { DrizzleQueryError } from "drizzle-orm";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 
 import { runOrgIdBackfill } from "./migrations/orgid_backfill.ts";
+import {
+	ensureSelfhostSchema,
+	removeStaleForkMigrationRow,
+} from "./migrations/selfhost_schema.ts";
 import { runSpaceMemberRoleBackfill } from "./migrations/space_member_role_backfill.ts";
 
 async function runMigrate() {
@@ -21,6 +25,8 @@ function errorIsOrgIdMigration(e: unknown): e is DrizzleQueryError {
 }
 
 export async function migrateDb() {
+	await removeStaleForkMigrationRow();
+
 	try {
 		await runMigrate();
 	} catch (e) {
@@ -43,4 +49,5 @@ export async function migrateDb() {
 	}
 
 	await runSpaceMemberRoleBackfill();
+	await ensureSelfhostSchema();
 }
