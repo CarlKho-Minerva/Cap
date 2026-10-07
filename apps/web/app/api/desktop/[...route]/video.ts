@@ -24,6 +24,7 @@ import { z } from "zod";
 import { invalidateGoogleDriveStorageQuotaCache } from "@/lib/google-drive-storage-quota";
 import { maybeStartLiveTranscription } from "@/lib/live-transcribe";
 import { runPromise } from "@/lib/server";
+import { decodeStorageVideo } from "@/lib/video-storage";
 import {
 	GOOGLE_DRIVE_UPLOAD_FEATURE,
 	hasDesktopFeature,
@@ -457,7 +458,9 @@ app.post(
 		"json",
 		z.object({
 			videoId: z.string(),
-			status: z.union([z.literal("COMPLETE"), z.literal("NO_AUDIO")]).optional(),
+			status: z
+				.union([z.literal("COMPLETE"), z.literal("NO_AUDIO")])
+				.optional(),
 		}),
 	),
 	async (c) => {
@@ -489,9 +492,10 @@ app.post(
 					const [bucket] = yield* Storage.getAccessForVideo(
 						decodeStorageVideo(video),
 					);
-					return yield* bucket
-						.headObject(key)
-						.pipe(Effect.as(true), Effect.orElseSucceed(() => false));
+					return yield* bucket.headObject(key).pipe(
+						Effect.as(true),
+						Effect.orElseSucceed(() => false),
+					);
 				}).pipe(runPromise);
 
 				if (!exists)

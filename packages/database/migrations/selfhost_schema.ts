@@ -103,7 +103,9 @@ export async function ensureSelfhostSchema() {
 	] as const) {
 		if (!(await indexExists("analytics_events", name))) {
 			await db().execute(
-				sql.raw(`CREATE INDEX \`${name}\` ON \`analytics_events\` (${columns})`),
+				sql.raw(
+					`CREATE INDEX \`${name}\` ON \`analytics_events\` (${columns})`,
+				),
 			);
 			console.log(`[selfhost] created index ${name}`);
 		}
@@ -115,7 +117,9 @@ export async function ensureSelfhostSchema() {
 		await db().execute(
 			sql`ALTER TABLE \`comments\` MODIFY COLUMN \`authorId\` varchar(15)`,
 		);
-		console.log("[selfhost] made comments.authorId nullable for guest comments");
+		console.log(
+			"[selfhost] made comments.authorId nullable for guest comments",
+		);
 	}
 	if (!(await column("comments", "guestName"))) {
 		await db().execute(
