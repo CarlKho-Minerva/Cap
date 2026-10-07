@@ -117,6 +117,12 @@ function createServerEnv() {
 				.describe(
 					"Comma-separated domains or full email addresses refused at sign-in",
 				),
+			CAP_ALLOW_GUEST_COMMENTS: z
+				.string()
+				.optional()
+				.describe(
+					"Set to 'true' to let signed-out visitors comment and react on share pages using a self-chosen display name",
+				),
 
 			/// AI providers
 			ASSEMBLY_API_KEY: z.string().optional().describe("Audio transcription"),
