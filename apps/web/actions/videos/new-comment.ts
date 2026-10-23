@@ -11,6 +11,7 @@ import { Comment, Policy, type Video } from "@cap/web-domain";
 import { and, count, eq, gt, isNull } from "drizzle-orm";
 import { Effect, Exit } from "effect";
 import { revalidatePath } from "next/cache";
+import { isReplyParentOnVideo } from "@/lib/comment-reply-parent";
 import {
 	GUEST_COMMENT_MAX_LENGTH,
 	GUEST_COMMENT_RATE_LIMIT,
@@ -74,6 +75,11 @@ export async function newComment(data: {
 		throw new Error("Video not found");
 	}
 
+	if (
+		parentCommentId &&
+		!(await isReplyParentOnVideo(parentCommentId, videoId))
+	)
+		throw new Error("Comment not found");
 	let guestName: string | null = null;
 
 	if (!user) {

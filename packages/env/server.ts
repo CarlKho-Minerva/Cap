@@ -22,6 +22,10 @@ function createServerEnv() {
 			DATABASE_ENCRYPTION_KEY: z
 				.string()
 				.optional()
+				.refine(
+					(key) => !key || [16, 32].includes(Buffer.from(key, "hex").length),
+					"Must be 32 or 64 hex characters, e.g. from `openssl rand -hex 32`",
+				)
 				.describe(
 					"32 byte hex string for encrypting values like AWS access keys",
 				),
@@ -75,10 +79,16 @@ function createServerEnv() {
 			WORKOS_CLIENT_ID: z.string().optional(),
 			WORKOS_API_KEY: z.string().optional(),
 
+			/// Generic OIDC
+			OIDC_ISSUER: z.string().optional(),
+			OIDC_CLIENT_ID: z.string().optional(),
+			OIDC_CLIENT_SECRET: z.string().optional(),
+			OIDC_NAME: z.string().optional(),
+
 			/// Reverse-proxy (trusted header) auth
-			// Sign in via an authenticating reverse proxy (e.g. OpenHost). Set BOTH
-			// to enable. SECURITY: only use behind a proxy that strips any client-sent
-			// copy of the header — otherwise it is a login bypass.
+			// Sign in via an authenticating reverse proxy (e.g. OpenHost). Set all
+			// three values to enable. SECURITY: keep the origin private; the proxy
+			// must strip client-sent trust/secret headers and set both only after auth.
 			TRUSTED_PROXY_AUTH_HEADER: z
 				.string()
 				.optional()
@@ -96,7 +106,7 @@ function createServerEnv() {
 				.string()
 				.optional()
 				.describe(
-					"Optional defense-in-depth: if set, the proxy must also send this value as the 'x-trusted-proxy-secret' header, so a request that reaches Cap outside the proxy can't spoof the trust header.",
+					"Required to enable trusted-proxy auth: a non-blank shared secret the proxy must send as 'x-trusted-proxy-secret'. Unset or blank disables the provider. Keep this server-side, never in browser code.",
 				),
 
 			/// Settings
@@ -126,6 +136,12 @@ function createServerEnv() {
 
 			/// AI providers
 			ASSEMBLY_API_KEY: z.string().optional().describe("Audio transcription"),
+			ASSEMBLY_BASE_URL: z
+				.string()
+				.optional()
+				.describe(
+					"Transcription API base URL (eg. https://api.eu.assemblyai.com)",
+				),
 			ANTHROPIC_API_KEY: z.string().optional().describe("AI chat"),
 			OPENAI_API_KEY: z.string().optional().describe("AI summaries"),
 			GROQ_API_KEY: z.string().optional().describe("AI summaries"),

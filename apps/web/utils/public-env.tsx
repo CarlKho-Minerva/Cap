@@ -6,6 +6,8 @@ type PublicEnvContext = {
 	webUrl: string;
 	googleAuthAvailable: boolean;
 	workosAuthAvailable: boolean;
+	oidcAuthAvailable: boolean;
+	oidcName: string;
 	trustedProxyAuthAvailable?: boolean;
 };
 
